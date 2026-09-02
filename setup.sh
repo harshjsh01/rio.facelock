@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Omarchy Biometrics Suite: Face ID & Fingerprint
-# Author: Rio
+# Author: Harsh Joshi
 # Plugin ID: rio.facelock
 # Version: 1.0.0
 # Description: Production-grade Face Unlock & Fingerprint for Omarchy Linux
@@ -29,7 +29,7 @@ banner() {
     echo " ╚██████╔╝██║ ╚═╝ ██║██║  ██║██║  ██║╚██████╗██║  ██║   ██║   "
     echo "  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   "
     echo -e "       👤 High-Accuracy AI Face ID & Biometrics Suite        ${C_RESET}"
-    echo -e "              ${C_PURPLE}Created with ❤️  by Rio${C_RESET}"
+    echo -e "              ${C_PURPLE}Created with ❤️  by Harsh Joshi${C_RESET}"
     echo -e "${C_BLUE}=================================================================${C_RESET}"
     echo ""
 }

@@ -1,0 +1,16 @@
+{
+  "id": "rio.facelock",
+  "name": "Omarchy Biometrics Suite (Face ID & Fingerprint)",
+  "version": "1.0.0",
+  "author": "Rio",
+  "description": "High-accuracy AI Face Unlock & Fingerprint biometrics for Omarchy Linux with animated visual radar, SDDM greeter, sudo, and lock screen support.",
+  "category": "Security",
+  "dependencies": [
+    "facelock-bin",
+    "onnxruntime-cpu"
+  ],
+  "optional_dependencies": [
+    "fprintd"
+  ],
+  "license": "GPL-3.0"
+}

@@ -116,6 +116,6 @@ fprintd-verify $USER
 
 ## 📜 Credits & License
 
-* **Author**: Rio
+* **Author**: Harsh Joshi
 * **License**: GPL-3.0
 * **Designed for**: [Omarchy Linux](https://omarchy.org)

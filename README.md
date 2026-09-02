@@ -63,12 +63,10 @@ When configuring biometric security on Linux, there are two distinct architectur
 
 ## 🚀 Quick Installation
 
-Run the interactive setup wizard:
+Install and configure everything in a single command:
 
 ```bash
-cd ~/.config/omarchy/plugins/rio.facelock
-chmod +x setup.sh
-./setup.sh
+git clone https://github.com/harshjsh01/rio.facelock.git ~/.config/omarchy/plugins/rio.facelock && cd ~/.config/omarchy/plugins/rio.facelock && ./setup.sh
 ```
 
 The installer will automatically:

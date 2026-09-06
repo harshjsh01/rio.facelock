@@ -27,9 +27,7 @@ Item {
   readonly property int fieldFontSize: Math.round(Style.font.heading * 1.125)
   readonly property int passwordDotFontSize: Math.round(Style.font.heading * 1.33)
   readonly property int passwordDotLetterSpacing: Math.round(Style.font.heading * 0.19)
-  // Space to keep clear on each side of the field for the fingerprint icon
-  // (icon width plus a gap) so the centered dots never run under it.
-  readonly property real fingerprintReserve: fingerprintConfigured ? Math.round(fingerprintIcon.implicitWidth + 12) : 0
+  readonly property real fingerprintReserve: 0
   // Shrink the dots to fit once the password outgrows the field, so every
   // keystroke stays visible — otherwise long passwords clip with no feedback.
   readonly property real passwordDotScale: dotMetrics.advanceWidth > 0
@@ -93,10 +91,22 @@ Item {
     anchors.fill: parent
     color: Color.background
 
+    AnimatedImage {
+      id: wallpaperGif
+      anchors.fill: parent
+      visible: root.loadBackground && root.backgroundPath.toLowerCase().indexOf(".gif") !== -1
+      source: visible ? root.fileUrl(root.backgroundPath) : ""
+      fillMode: Image.PreserveAspectCrop
+      asynchronous: true
+      cache: false
+      playing: true
+    }
+
     Image {
       id: wallpaper
       anchors.fill: parent
-      source: root.loadBackground ? root.fileUrl(root.backgroundPath) : ""
+      visible: root.loadBackground && root.backgroundPath.toLowerCase().indexOf(".gif") === -1
+      source: visible ? root.fileUrl(root.backgroundPath) : ""
       fillMode: Image.PreserveAspectCrop
       asynchronous: true
       cache: false
@@ -106,7 +116,7 @@ Item {
 
     Rectangle {
       anchors.fill: parent
-      color: Qt.rgba(0, 0, 0, 0.25)
+      color: Qt.rgba(0, 0, 0, 0.20)
     }
 
     MouseArea {
@@ -116,15 +126,29 @@ Item {
       onPositionChanged: root.wakeRequested()
     }
 
-    // Android-style Face Unlock Indicator
+    // Original Omarchy Logo
+    Image {
+      id: omarchyLogo
+      source: "file:///usr/share/omarchy/default/sddm/omarchy/logo.png"
+      width: Math.min(460, parent.width * 0.45)
+      height: sourceSize.width > 0 ? Math.round(width * sourceSize.height / sourceSize.width) : 0
+      fillMode: Image.PreserveAspectFit
+      anchors.top: parent.top
+      anchors.topMargin: Math.max(30, Math.round(parent.height * 0.08))
+      anchors.horizontalCenter: parent.horizontalCenter
+      asynchronous: true
+      mipmap: true
+    }
+
+    // Face Unlock Indicator
     Item {
       id: faceBadge
       visible: root.faceUnlockConfigured || root.weeklyPasswordRequired
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: inputField.top
-      anchors.bottomMargin: 28
-      width: 80
-      height: 80
+      anchors.bottomMargin: 20
+      width: 70
+      height: 70
 
       // Glowing / Pulsing circular background
       Rectangle {
@@ -132,18 +156,18 @@ Item {
         anchors.fill: parent
         radius: width / 2
         color: {
-          if (root.weeklyPasswordRequired) return Qt.rgba(1.0, 0.65, 0.0, 0.18)
-          if (root.faceState === "success") return Qt.rgba(0.2, 0.85, 0.4, 0.28)
-          if (root.faceState === "failed") return Qt.rgba(1.0, 0.3, 0.3, 0.18)
-          if (root.faceState === "scanning" || root.faceState === "verifying") return Qt.rgba(0.3, 0.65, 1.0, 0.2)
-          return Qt.rgba(1.0, 1.0, 1.0, 0.1)
+          if (root.weeklyPasswordRequired) return Qt.rgba(1.0, 0.65, 0.0, 0.22)
+          if (root.faceState === "success") return Qt.rgba(0.0, 1.0, 0.62, 0.30)
+          if (root.faceState === "failed") return Qt.rgba(1.0, 0.3, 0.3, 0.22)
+          if (root.faceState === "scanning" || root.faceState === "verifying") return Qt.rgba(0.0, 1.0, 0.62, 0.22)
+          return Qt.rgba(0.05, 0.09, 0.08, 0.60)
         }
         border.color: {
-          if (root.weeklyPasswordRequired) return Qt.rgba(1.0, 0.65, 0.0, 0.7)
-          if (root.faceState === "success") return Qt.rgba(0.2, 0.85, 0.4, 0.85)
-          if (root.faceState === "failed") return Qt.rgba(1.0, 0.3, 0.3, 0.7)
-          if (root.faceState === "scanning" || root.faceState === "verifying") return Qt.rgba(0.3, 0.65, 1.0, 0.7)
-          return Qt.rgba(1.0, 1.0, 1.0, 0.2)
+          if (root.weeklyPasswordRequired) return Qt.rgba(1.0, 0.65, 0.0, 0.75)
+          if (root.faceState === "success") return Qt.rgba(0.0, 1.0, 0.62, 0.95)
+          if (root.faceState === "failed") return Qt.rgba(1.0, 0.3, 0.3, 0.80)
+          if (root.faceState === "scanning" || root.faceState === "verifying") return Qt.rgba(0.0, 1.0, 0.62, 0.85)
+          return Qt.rgba(0.0, 1.0, 0.62, 0.40)
         }
         border.width: 2
 
@@ -156,7 +180,7 @@ Item {
           anchors.fill: parent
           radius: width / 2
           color: "transparent"
-          border.color: Qt.rgba(0.3, 0.65, 1.0, 0.8)
+          border.color: Qt.rgba(0.0, 1.0, 0.62, 0.85)
           border.width: 2
           visible: (root.faceState === "scanning" || root.faceState === "verifying") && !root.weeklyPasswordRequired
           scale: 1.0
@@ -166,28 +190,28 @@ Item {
             running: pulseRing.visible
             loops: Animation.Infinite
             ParallelAnimation {
-              NumberAnimation { target: pulseRing; property: "scale"; from: 1.0; to: 1.45; duration: 1000; easing.type: Easing.OutQuad }
-              NumberAnimation { target: pulseRing; property: "opacity"; from: 0.9; to: 0.0; duration: 1000; easing.type: Easing.OutQuad }
+              NumberAnimation { target: pulseRing; property: "scale"; from: 1.0; to: 1.5; duration: 1000; easing.type: Easing.OutQuad }
+              NumberAnimation { target: pulseRing; property: "opacity"; from: 0.95; to: 0.0; duration: 1000; easing.type: Easing.OutQuad }
             }
             PauseAnimation { duration: 150 }
           }
         }
       }
 
-      // Center Animated Emoji
+      // Center Icon (Eyes)
       Text {
         id: emojiIcon
         anchors.centerIn: parent
-        font.pixelSize: 36
+        font.pixelSize: 32
         text: {
           if (root.weeklyPasswordRequired) return "🔑"
           if (root.faceState === "success") return "😊"
           if (root.faceState === "scanning" || root.faceState === "verifying") return "👀"
           if (root.faceState === "failed") return "😕"
-          return "👤"
+          return "🔒"
         }
 
-        scale: root.faceState === "success" ? 1.3 : (root.faceState === "scanning" ? 1.1 : 1.0)
+        scale: root.faceState === "success" ? 1.25 : (root.faceState === "scanning" ? 1.1 : 1.0)
         Behavior on scale {
           NumberAnimation { duration: 300; easing.type: Easing.OutBack }
         }
@@ -202,9 +226,10 @@ Item {
         font.pixelSize: Math.round(Style.font.body * 0.85)
         color: {
           if (root.weeklyPasswordRequired) return Qt.rgba(1.0, 0.75, 0.2, 0.95)
-          if (root.faceState === "success") return Qt.rgba(0.3, 0.9, 0.5, 0.95)
+          if (root.faceState === "success") return Qt.rgba(0.0, 1.0, 0.62, 0.95)
           if (root.faceState === "failed") return Qt.rgba(1.0, 0.4, 0.4, 0.95)
-          return Qt.rgba(1.0, 1.0, 1.0, 0.75)
+          if (root.faceState === "scanning" || root.faceState === "verifying") return Qt.rgba(0.0, 1.0, 0.62, 0.95)
+          return Qt.rgba(0.85, 0.95, 0.9, 0.75)
         }
         text: {
           if (root.weeklyPasswordRequired) return "Weekly password check"
@@ -221,7 +246,9 @@ Item {
       id: inputField
       width: root.fieldWidth
       height: root.fieldHeight
-      anchors.centerIn: parent
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: parent.bottom
+      anchors.bottomMargin: Math.max(36, Math.round(parent.height * 0.08))
       color: Color.lock.background
       borderSpec: root.inputBorderSpec
       radius: Style.cornerRadius
@@ -294,22 +321,10 @@ Item {
         elide: Text.ElideRight
       }
 
-      // Fingerprint hint pinned inside the field's right edge when a sensor is
-      // enrolled, so the user knows they can touch to unlock instead of typing.
-      // Matches hyprlock, which draws its fingerprint icon in the same spot.
       Text {
         id: fingerprintIcon
         objectName: "fingerprintIndicator"
-        anchors.right: parent.right
-        anchors.rightMargin: inputField.borderRight + 18
-        anchors.verticalCenter: parent.verticalCenter
-        visible: root.fingerprintConfigured
-        text: "󰈷"
-        color: Color.lock.placeholder
-        font.family: Style.font.family
-        font.pixelSize: Math.round(root.fieldFontSize * 1.1)
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
+        visible: false
       }
     }
   }

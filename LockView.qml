@@ -126,19 +126,6 @@ Item {
       onPositionChanged: root.wakeRequested()
     }
 
-    // Original Omarchy Logo
-    Image {
-      id: omarchyLogo
-      source: "file:///usr/share/omarchy/default/sddm/omarchy/logo.png"
-      width: Math.min(460, parent.width * 0.45)
-      height: sourceSize.width > 0 ? Math.round(width * sourceSize.height / sourceSize.width) : 0
-      fillMode: Image.PreserveAspectFit
-      anchors.top: parent.top
-      anchors.topMargin: Math.max(30, Math.round(parent.height * 0.08))
-      anchors.horizontalCenter: parent.horizontalCenter
-      asynchronous: true
-      mipmap: true
-    }
 
     // Face Unlock Indicator
     Item {

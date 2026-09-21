@@ -50,11 +50,29 @@ When configuring biometric security on Linux, there are two distinct architectur
 
 ---
 
+## 🛡️ Security Architecture & Threat Model
+
+1. **Zero-Disk Passphrase Piping**:
+   - Master disk encryption passphrases are streamed directly into `cryptsetup` via in-memory standard input pipes (`--key-file=-`). Passphrases are **never written to persistent disk pathnames or temporary files**.
+   - Strict `trap` handlers immediately purge secret variables from memory on exit, error, or interruption (`INT`, `TERM`, `HUP`).
+
+2. **Cryptographic Binary Integrity Verification**:
+   - The installer verifies the cryptographic SHA-256 hash of `/usr/lib/security/pam_facelock.so` and `facelock` binaries against a pinned baseline before registering them into PAM stacks:
+     - Reference PAM Module SHA-256: `ca4e525b1a70fbb620e47af81b6df3bfd90166c260b546ea846fd8ca8f8da1a3`
+     - Reference Daemon SHA-256: `b87dbf72540f3aa90b8682cb0c7efefec2c9643cf09d8da4a036a34b5bc8061e`
+
+3. **Transactional Pre-Modification Backups & Rollback**:
+   - Prior to modifying `/etc/pam.d/` or system configurations, exact backups are preserved in `/etc/omarchy/backup/rio.facelock/`.
+   - If setup is cancelled or encounters an error, a transactional rollback is automatically triggered.
+   - Complete uninstallation and rollback can be performed at any time with `./setup.sh --remove`.
+
+---
+
 ## ✨ Features
 
 - **🧠 Neural Network AI Engine**: Powered by lightweight ONNX neural models (`insightface` / `facelock`) with hardware-accelerated feature extraction.
 - **⚡ Sub-Second Recognition**: Average authentication time of **0.8s – 1.7s** with liveness verification.
-- **🎨 Custom Omarchy Quickshell UI**: Pulsing radar scanner (`👀`), green success state (`😊`), fingerprint indicator (`👆`), and seamless password fallback.
+- **🎨 Custom Omarchy Quickshell UI**: Pulsing radar scanner (`👀`), green success state (`😊`), fingerprint indicator, and seamless password fallback.
 - **👆 Dual Biometric Stack**: Combines Face ID (`facelock`) and Fingerprint (`fprintd`) in a unified PAM pipeline.
 - **🛡️ Stranded Lock Prevention**: Zero-race condition state machine prevents double lock screens on startup.
 - **🔒 Weekly Password Check**: Built-in security policy enforces master password verification once every 7 days.
@@ -63,22 +81,37 @@ When configuring biometric security on Linux, there are two distinct architectur
 
 ## 🚀 Quick Installation
 
-Install and configure everything in a single command:
-
+### Option 1: Native Omarchy Plugin CLI (Recommended)
 ```bash
-git clone https://github.com/harshjsh01/rio.facelock.git ~/.config/omarchy/plugins/rio.facelock && cd ~/.config/omarchy/plugins/rio.facelock && ./setup.sh
+omarchy plugin add https://github.com/harshjsh01/rio.facelock.git --enable
+~/.config/omarchy/plugins/rio.facelock/setup.sh
 ```
 
-The installer will automatically:
-1. Detect your webcam (`/dev/video0`) and fingerprint reader.
-2. Install required AI neural libraries (`facelock-bin`, `onnxruntime-cpu`).
-3. Guide you through selecting **Method 1 (High Security)** or **Method 2 (Convenience)**.
-4. Auto-patch VMware shared folder FUSE options if running inside a virtual machine.
-5. Launch the high-resolution face enrollment tool.
+### Option 2: Direct Git Clone
+```bash
+git clone https://github.com/harshjsh01/rio.facelock.git ~/.config/omarchy/plugins/rio.facelock
+cd ~/.config/omarchy/plugins/rio.facelock
+./setup.sh
+```
 
 ---
 
-## 📸 Manual Biometrics Management
+## 🔧 Management & CLI Options
+
+```bash
+# Non-destructive inspection of biometrics, services, and PAM status
+./setup.sh --check
+
+# Complete uninstallation, PAM restoration, and system rollback
+./setup.sh --remove
+
+# View help and usage
+./setup.sh --help
+```
+
+---
+
+## 📸 Manual Biometrics Commands
 
 ### 1. Face ID Commands
 ```bash

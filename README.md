@@ -46,9 +46,9 @@ omarchy plugin add https://github.com/harshjsh01/rio.facelock --enable
 ```
 
 ### Step 2: Install Official Signed Dependencies
-Install official, GPG-signed neural network libraries from the Arch Linux repository:
+Install official, GPG-signed neural network libraries from the Arch Linux repository, pinned to exact reviewed package version and verified integrity (`onnxruntime-cpu=1.29.0-3`, SHA-256: `d206bb24f18e793590d70bb0065cc03fcea104d1671d86b856f13a14489df8be`):
 ```bash
-sudo pacman -S --needed onnxruntime-cpu
+sudo pacman -S --needed "onnxruntime-cpu=1.29.0-3"
 ```
 
 ### Step 3: Verified Immutable Installation of Biometric Daemon
@@ -58,7 +58,7 @@ To enforce strict supply-chain integrity and prevent unreviewed external code fr
 BUILD_DIR=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}" facelock-install.XXXXXX) && \
 chmod 700 "$BUILD_DIR" && \
 cd "$BUILD_DIR" && \
-curl -sLO "https://github.com/harshjsh01/rio.facelock/releases/download/v1.0.0/facelock-bin-0.1.4-1-x86_64.pkg.tar.zst" && \
+curl --fail --location --silent --show-error --max-time 120 --max-filesize 25000000 -o facelock-bin-0.1.4-1-x86_64.pkg.tar.zst "https://github.com/harshjsh01/rio.facelock/releases/download/v1.0.0/facelock-bin-0.1.4-1-x86_64.pkg.tar.zst" && \
 echo "1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657  facelock-bin-0.1.4-1-x86_64.pkg.tar.zst" | sha256sum -c - && \
 sudo install -d -m 0700 -o root -g root /run/facelock-pkg && \
 sudo mv facelock-bin-0.1.4-1-x86_64.pkg.tar.zst /run/facelock-pkg/package.pkg.tar.zst && \
@@ -76,7 +76,8 @@ sudo facelock setup && \
 sudo facelock enroll $USER
 ```
 
-* **Complete Immutable Package Byte Verification**: Downloads a pinned release package artifact and verifies its complete archive bytes against the reviewed SHA-256 digest (`1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657`) in user space *before* any root process parses or touches it.
+* **Bounded Download with Failure Handling**: Downloads with `--fail --location --silent --show-error`, a strict 120-second timeout (`--max-time 120`), and a 25MB response limit (`--max-filesize 25000000`) to prevent stalled connections or oversized payloads from consuming disk space before verification.
+* **Complete Immutable Package Byte Verification**: Verifies the complete archive bytes against the reviewed SHA-256 digest (`1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657`) in user space *before* any root process parses or touches it.
 * **Root Snapshot Integrity Binding**: The verified package is staged into a root-owned `0700` snapshot directory (`/run/facelock-pkg/package.pkg.tar.zst`, mode `0600`) and cryptographically re-verified before `pacman` opens it, ensuring the exact verified bytes are what `pacman -U` installs.
 * **Post-Installation Defense-in-Depth**: Validates the installed binary payloads on disk (`/usr/bin/facelock`, `/usr/bin/facelock-polkit-agent`, and `pam_facelock.so`) before `sudo facelock setup` runs.
 * **Strict Fail-Closed Enforcement**: All steps are chained with `&&`; any mismatch aborts execution immediately with zero root execution or elevation.

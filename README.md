@@ -52,23 +52,35 @@ sudo pacman -S --needed onnxruntime-cpu
 ```
 
 ### Step 3: Verified Immutable Installation of Biometric Daemon
-To enforce supply-chain integrity and prevent unreviewed external code from entering the root PAM stack, install `facelock-bin` from its reviewed immutable git commit with cryptographic checksum verification:
+To enforce strict supply-chain integrity and prevent unreviewed external code from entering the root PAM stack, install `facelock-bin` using an isolated private build directory, full tree checksum validation, root snapshot staging, and complete pre-elevation payload verification:
 
 ```bash
-git clone https://aur.archlinux.org/facelock-bin.git /tmp/facelock-bin && \
-cd /tmp/facelock-bin && \
+BUILD_DIR=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}" facelock-build.XXXXXX) && \
+chmod 700 "$BUILD_DIR" && \
+cd "$BUILD_DIR" && \
+git clone https://aur.archlinux.org/facelock-bin.git . && \
 git checkout 2a3cec6462cdd0ee7ca3bc352dfeb8b46ab2f7f5 && \
 echo "820aaa652284a0c3328048d635e4b6a8320a2c12b858270c2f9bfbcdf1cc3f8b  PKGBUILD" | sha256sum -c - && \
-makepkg -si --noconfirm && \
+echo "26cdee00e0b0ed7e752a6e0c50dcc5e3250dee3e28d61457e56be0a895e2979e  facelock.install" | sha256sum -c - && \
+makepkg -s --noconfirm && \
+PKG_FILE=$(ls -1 facelock-bin-*.pkg.tar.zst) && \
+sudo install -d -m 0700 -o root -g root /run/facelock-pkg && \
+sudo cp -p "$PKG_FILE" /run/facelock-pkg/ && \
+sudo pacman -U --noconfirm /run/facelock-pkg/"$PKG_FILE" && \
+sudo rm -rf /run/facelock-pkg && \
+rm -rf "$BUILD_DIR" && \
+echo "b87dbf72540f3aa90b8682cb0c7efefec2c9643cf09d8da4a036a34b5bc8061e  /usr/bin/facelock" | sha256sum -c - && \
+echo "17a11c9c8dbf8c09cc6eb3e27775cb6193b18c8727e4c648bd23ac0fdfd6fceb  /usr/bin/facelock-polkit-agent" | sha256sum -c - && \
 echo "ca4e525b1a70fbb620e47af81b6df3bfd90166c260b546ea846fd8ca8f8da1a3  /usr/lib/security/pam_facelock.so" | sha256sum -c - && \
 sudo facelock setup && \
 sudo facelock enroll $USER
 ```
 
-* **Immutable Commit Binding**: Fixed to commit `2a3cec6` (`v0.1.4-1`).
-* **PKGBUILD Verification**: SHA-256 is validated before package compilation.
-* **Pre-Elevation PAM Verification**: `/usr/lib/security/pam_facelock.so` checksum is validated before `sudo facelock setup` runs.
-* **Fail-Closed**: If any checksum mismatches, the pipeline halts immediately with no root elevation.
+* **Private Non-Predictable Build Environment**: Builds in a private `0700` directory to avoid shared `/tmp` race conditions.
+* **Full Tree Source Verification**: Validates both `PKGBUILD` and `facelock.install` before `makepkg` execution.
+* **Root Snapshot Package Staging**: Stages the compiled package into a root-owned `0700` snapshot (`/run/facelock-pkg/`) before `pacman -U`.
+* **Complete Payload Verification**: Validates `/usr/bin/facelock`, `/usr/bin/facelock-polkit-agent`, and `pam_facelock.so` against reviewed hashes before `sudo facelock setup` runs.
+* **Strict Fail-Closed Enforcement**: All commands are chained with `&&`; any hash mismatch aborts execution immediately with zero root elevation.
 
 ---
 

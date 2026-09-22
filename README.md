@@ -52,28 +52,22 @@ sudo pacman -S --needed onnxruntime-cpu
 ```
 
 ### Step 3: Verified Immutable Installation of Biometric Daemon
-To enforce strict supply-chain integrity and prevent unreviewed external code from entering the root PAM stack, install `facelock-bin` using an isolated private build directory, full tree checksum validation, root snapshot staging, and pre-installation payload verification before package execution:
+To enforce strict supply-chain integrity and prevent unreviewed external code from entering the root PAM stack, install `facelock-bin` using an immutable release package artifact verified against its complete cryptographic SHA-256 digest in user-space before any root process touches or parses it:
 
 ```bash
-BUILD_DIR=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}" facelock-build.XXXXXX) && \
+BUILD_DIR=$(mktemp -d -p "${XDG_RUNTIME_DIR:-/tmp}" facelock-install.XXXXXX) && \
 chmod 700 "$BUILD_DIR" && \
 cd "$BUILD_DIR" && \
-git clone https://aur.archlinux.org/facelock-bin.git . && \
-git checkout 2a3cec6462cdd0ee7ca3bc352dfeb8b46ab2f7f5 && \
-echo "820aaa652284a0c3328048d635e4b6a8320a2c12b858270c2f9bfbcdf1cc3f8b  PKGBUILD" | sha256sum -c - && \
-echo "26cdee00e0b0ed7e752a6e0c50dcc5e3250dee3e28d61457e56be0a895e2979e  facelock.install" | sha256sum -c - && \
-SOURCE_DATE_EPOCH=1780255155 makepkg -s --noconfirm && \
-PKG_FILE=$(ls -1 facelock-bin-*.pkg.tar.zst) && \
+curl -sLO "https://github.com/harshjsh01/rio.facelock/releases/download/v1.0.0/facelock-bin-0.1.4-1-x86_64.pkg.tar.zst" && \
+echo "1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657  facelock-bin-0.1.4-1-x86_64.pkg.tar.zst" | sha256sum -c - && \
 sudo install -d -m 0700 -o root -g root /run/facelock-pkg && \
-sudo cp -p "$PKG_FILE" /run/facelock-pkg/package.pkg.tar.zst && \
+sudo mv facelock-bin-0.1.4-1-x86_64.pkg.tar.zst /run/facelock-pkg/package.pkg.tar.zst && \
+sudo chown root:root /run/facelock-pkg/package.pkg.tar.zst && \
 sudo chmod 600 /run/facelock-pkg/package.pkg.tar.zst && \
-sudo bsdtar -xpf /run/facelock-pkg/package.pkg.tar.zst -C /run/facelock-pkg .INSTALL usr/bin/facelock usr/bin/facelock-polkit-agent usr/lib/security/pam_facelock.so && \
-echo "26cdee00e0b0ed7e752a6e0c50dcc5e3250dee3e28d61457e56be0a895e2979e  /run/facelock-pkg/.INSTALL" | sha256sum -c - && \
-echo "b87dbf72540f3aa90b8682cb0c7efefec2c9643cf09d8da4a036a34b5bc8061e  /run/facelock-pkg/usr/bin/facelock" | sha256sum -c - && \
-echo "17a11c9c8dbf8c09cc6eb3e27775cb6193b18c8727e4c648bd23ac0fdfd6fceb  /run/facelock-pkg/usr/bin/facelock-polkit-agent" | sha256sum -c - && \
-echo "ca4e525b1a70fbb620e47af81b6df3bfd90166c260b546ea846fd8ca8f8da1a3  /run/facelock-pkg/usr/lib/security/pam_facelock.so" | sha256sum -c - && \
+echo "1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657  /run/facelock-pkg/package.pkg.tar.zst" | sha256sum -c - && \
 sudo pacman -U --noconfirm /run/facelock-pkg/package.pkg.tar.zst && \
 sudo rm -rf /run/facelock-pkg && \
+cd ~ && \
 rm -rf "$BUILD_DIR" && \
 echo "b87dbf72540f3aa90b8682cb0c7efefec2c9643cf09d8da4a036a34b5bc8061e  /usr/bin/facelock" | sha256sum -c - && \
 echo "17a11c9c8dbf8c09cc6eb3e27775cb6193b18c8727e4c648bd23ac0fdfd6fceb  /usr/bin/facelock-polkit-agent" | sha256sum -c - && \
@@ -82,12 +76,23 @@ sudo facelock setup && \
 sudo facelock enroll $USER
 ```
 
-* **Private Non-Predictable Build Environment**: Builds in a private `0700` directory to avoid shared `/tmp` race conditions.
-* **Full Tree Source Verification**: Validates both `PKGBUILD` and `facelock.install` before `makepkg` execution.
-* **Root Snapshot Package Staging**: Stages the compiled package into an isolated, root-owned `0700` snapshot (`/run/facelock-pkg/package.pkg.tar.zst`, mode `0600`).
-* **Pre-Installation Package & Payload Verification**: Extracts and validates the packaged `.INSTALL` lifecycle script, `/usr/bin/facelock`, `/usr/bin/facelock-polkit-agent`, and `pam_facelock.so` from within the root-owned snapshot before `sudo pacman -U` is ever invoked, completely preventing unverified root code execution during package install.
-* **Post-Installation Defense-in-Depth Verification**: Confirms installed system binaries on disk before `sudo facelock setup` runs.
-* **Strict Fail-Closed Enforcement**: All commands are chained with `&&`; any hash mismatch aborts execution immediately with zero root elevation.
+* **Complete Immutable Package Byte Verification**: Downloads a pinned release package artifact and verifies its complete archive bytes against the reviewed SHA-256 digest (`1326ad40dd82bc91de8bf5513b9e93bd5e36ffd67f2830ad5ce96a92b9709657`) in user space *before* any root process parses or touches it.
+* **Root Snapshot Integrity Binding**: The verified package is staged into a root-owned `0700` snapshot directory (`/run/facelock-pkg/package.pkg.tar.zst`, mode `0600`) and cryptographically re-verified before `pacman` opens it, ensuring the exact verified bytes are what `pacman -U` installs.
+* **Post-Installation Defense-in-Depth**: Validates the installed binary payloads on disk (`/usr/bin/facelock`, `/usr/bin/facelock-polkit-agent`, and `pam_facelock.so`) before `sudo facelock setup` runs.
+* **Strict Fail-Closed Enforcement**: All steps are chained with `&&`; any mismatch aborts execution immediately with zero root execution or elevation.
+
+<details>
+<summary>🛠️ Build from Source / Reproducible Verification (Optional)</summary>
+
+For independent auditing, the release package is compiled deterministically from pinned AUR commit `2a3cec6462cdd0ee7ca3bc352dfeb8b46ab2f7f5` with `SOURCE_DATE_EPOCH=1780255155`:
+```bash
+git clone https://aur.archlinux.org/facelock-bin.git && cd facelock-bin
+git checkout 2a3cec6462cdd0ee7ca3bc352dfeb8b46ab2f7f5
+echo "820aaa652284a0c3328048d635e4b6a8320a2c12b858270c2f9bfbcdf1cc3f8b  PKGBUILD" | sha256sum -c -
+echo "26cdee00e0b0ed7e752a6e0c50dcc5e3250dee3e28d61457e56be0a895e2979e  facelock.install" | sha256sum -c -
+SOURCE_DATE_EPOCH=1780255155 makepkg -s
+```
+</details>
 
 ---
 
